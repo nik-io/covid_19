@@ -125,4 +125,11 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
     ax2.tick_params(axis='y', labelcolor=color)
     ax2.set_ylim(0, 27)
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
+
+    fig2 = plt.figure(2)
+    color = 'tab:red'
+    ax3 = fig2.add_subplot(111)
+    ax3.set_ylabel('total number of incidents')
+    ax3.bar(skeys, [date_to_sum[dt] for dt in skeys], color=color)
+
     plt.show()
