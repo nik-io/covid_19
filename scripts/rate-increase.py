@@ -21,9 +21,6 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s %(message)s', level=log_level,
                         datefmt='%Y-%m-%d %H:%M:%S')
 
-    date_to_sum={}
-    date_to_cnt_sum={}
-    date_update_cnt={}
     '''
 date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumul_ICU,ncumul_vent,ncumul_released,ncumul_deceased,source
 2020-02-27,13:00,BS,2,1,0,,,,,https://www.coronavirus.bs.ch
@@ -31,7 +28,10 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
     '''
     pwd=os.path.join(os.getcwd(),args.dir_path)
     nfiles=0
+    # Not all cantons have updated info per day, so keep track of all unique dates
     all_dts=[]
+    # sum per canton per date
+    date_to_cnt_sum={}
     for fname in os.listdir(pwd):
         if not fname.endswith('CH_total.csv'):
             continue
@@ -39,7 +39,7 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
         with open(fn, 'r', encoding='utf-8') as f:
             logging.debug('opening file {}'.format(fn))
             next(f)                # skip first line
-            dt=parse('2001-01-01')# invalid
+            dt=parse('2001-01-01') # init to invalid
             try:
                 for line in f:
                     try:
@@ -63,6 +63,11 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
                 logging.info('error at line={}'.format(line))
                 sys.exit(1)
         nfiles+=1
+    # total sums per date
+    date_to_sum={}
+    # total update counts per date (how many cantons provided update on that date)
+    date_update_cnt={}
+    # go over all dates in sorted order
     sdts=sorted(all_dts)
     for dt in sdts:
         date_to_sum[dt]=0
@@ -93,6 +98,7 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
         diffs.append(date_to_sum[key] - prev)
         prev=date_to_sum[key]
     logging.debug('lastd={} lastv={}'.format(skeys[-1], diffs[-1]))
+    logging.info('sum={}'.format(sum(diffs)))
     import matplotlib.pyplot as plt
     # print(len(skeys))
     # print(len(diffs))
