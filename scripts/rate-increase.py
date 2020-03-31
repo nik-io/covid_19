@@ -33,7 +33,7 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
     # sum per canton per date
     date_to_cnt_sum={}
     for fname in os.listdir(pwd):
-        if not fname.endswith('CH_total.csv'):
+        if not fname.endswith('.csv'):
             continue
         fn=os.path.join(pwd, fname)
         with open(fn, 'r', encoding='utf-8') as f:
@@ -50,8 +50,8 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
                     cnt=line.split(',')[2]
                     if cnt not in date_to_cnt_sum:
                         date_to_cnt_sum[cnt]={}
-                    #if new_dt == dt:
-                    #    logging.error('Two rows with the same date prev={} new={}'.format(dt, new_dt))
+                    if new_dt == dt:
+                        logging.error('Two rows with the same date prev={} new={}'.format(dt, new_dt))
                     dt=new_dt
                     date_to_cnt_sum[cnt][dt]=new_cumul_pos
                     if dt not in all_dts:
