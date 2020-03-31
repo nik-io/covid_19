@@ -112,7 +112,7 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
     fig, ax1 = plt.subplots()
 
     color = 'tab:red'
-    ax1.set_xlabel('time (s)')
+    ax1.set_xlabel('date')
     ax1.set_ylabel('covid-19 incident increase from previous day', color=color)
     ax1.bar(skeys, diffs, color=color)
     ax1.tick_params(axis='y', labelcolor=color)
