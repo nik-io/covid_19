@@ -4,20 +4,20 @@ import argparse
 import os
 import sys
 import traceback
-from datetime import datetime
-from time import sleep
-import pytz
 import logging
-import dateutil
 from dateutil.parser import parse
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Rate of increase of covid cases in Switzerland',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--dir_path', dest='dir_path', default='../fallzahlen_kanton_total_csv/', help='Alpha vantage API key')
+    parser.add_argument('--dir_path', dest='dir_path', default='../fallzahlen_kanton_total_csv/', help='path to csv file')
+    parser.add_argument('--days', dest='days', default=1000, type=int, help='number of days to track')
+    parser.add_argument('--debug', dest='debug', action='store_true')
     args = parser.parse_args()
     log_level = logging.INFO
+    if args.debug:
+        log_level = logging.DEBUG
     logging.basicConfig(format='%(asctime)s %(message)s', level=log_level,
                         datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -26,12 +26,12 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
 2020-02-27,13:00,BS,2,1,0,,,,,https://www.coronavirus.bs.ch
 2020-02-27,17:13,FL,2,1,1,,,,,https://www.regierung.li/media/attachments/83-verdachtsfaelle-negativ-getestet.pdf?t=637202562374055719
     '''
-    pwd=os.path.join(os.getcwd(),args.dir_path)
-    nfiles=0
+    pwd=os.path.join(os.getcwd(), args.dir_path)
+    nfiles = 0
     # Not all cantons have updated info per day, so keep track of all unique dates
-    all_dts=[]
+    all_dts = []
     # sum per canton per date
-    date_to_cnt_sum={}
+    date_to_cnt_sum = {}
     for fname in os.listdir(pwd):
         if not fname.endswith('.csv'):
             continue
@@ -39,7 +39,8 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
         with open(fn, 'r', encoding='utf-8') as f:
             logging.debug('opening file {}'.format(fn))
             next(f)                # skip first line
-            dt=parse('2001-01-01') # init to invalid
+            dt = parse('2001-01-01') # init to invalid
+            old_sum = 0
             try:
                 for line in f:
                     try:
@@ -52,7 +53,10 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
                         date_to_cnt_sum[cnt]={}
                     if new_dt == dt:
                         logging.error('Two rows with the same date prev={} new={}'.format(dt, new_dt))
+                    if new_cumul_pos < old_sum:
+                        logging.error('Decrease in reported incidents across dates CN={} old={} new={} old_dt={} new_dt{} '.format(cnt, old_sum, new_cumul_pos, dt, new_dt))
                     dt=new_dt
+                    old_sum = new_cumul_pos
                     date_to_cnt_sum[cnt][dt]=new_cumul_pos
                     if dt not in all_dts:
                         all_dts.append(dt)
@@ -82,6 +86,10 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
             logging.debug('cnt={} val={} date={}'.format(cnt, val, dt))
             date_to_sum[dt]+=val
     skeys=sorted(date_to_sum.keys())
+
+    days=min(len(skeys), args.days)
+    days += 1                   # discard one
+    skeys=skeys[-days:]
     for key in skeys:
         logging.debug('date={} sum={}'.format(key, date_to_sum[key]))
 
@@ -90,24 +98,30 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
     #        date_to_sum.pop(key, None)
     #        logging.info('incomplete date for date={} files={} upds={}'.format(key, nfiles, date_update_cnt[key]))
     skeys=sorted(date_to_sum.keys())
+    skeys=skeys[-days:]
     diffs=[]
     prev=0
     for key in skeys:
         logging.debug('date={} prev={} cur={}'.format(key, prev, date_to_sum[key]))
-        assert date_to_sum[key] >= prev
-        diffs.append(date_to_sum[key] - prev)
+        if date_to_sum[key] < prev:
+            logging.error('Decrease! date={} prev={} cur={}'.format(key, prev, date_to_sum[key]))
+            diffs.append(0)
+        else:
+            diffs.append(date_to_sum[key] - prev)
         prev=date_to_sum[key]
     logging.debug('lastd={} lastv={}'.format(skeys[-1], diffs[-1]))
     logging.info('sum={}'.format(sum(diffs)))
     import matplotlib.pyplot as plt
-    # print(len(skeys))
-    # print(len(diffs))
+    #print(len(skeys))
+    #print(len(diffs))
     # print(len(date_to_cnt_sum))
     # fig = plt.figure()
     # plt.plot_date(skeys, diffs, 'g-', secondary_y=True)
     # plt.plot_date(skeys, [date_update_cnt[dt] for dt in skeys], 'b-')
     # plt.show()
-
+    # drop last one
+    skeys=skeys[-(days-1):]
+    diffs=diffs[-(days-1):]
 
     fig, ax1 = plt.subplots()
 
