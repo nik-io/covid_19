@@ -122,7 +122,7 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
     # drop last one
     skeys=skeys[-(days-1):]
     diffs=diffs[-(days-1):]
-
+    
     fig, ax1 = plt.subplots()
 
     color = 'tab:red'
@@ -145,5 +145,28 @@ date,time,abbreviation_canton_and_fl,ncumul_tested,ncumul_conf,ncumul_hosp,ncumu
     ax3 = fig2.add_subplot(111)
     ax3.set_ylabel('total number of incidents')
     ax3.bar(skeys, [date_to_sum[dt] for dt in skeys], color=color)
+
+    fig3 = plt.figure(3)
+    color = 'tab:red'
+    ax4 = fig3.add_subplot(111)
+    ax4.set_ylabel('covid-19 incident increase from previous day in Zurich', color=color)
+    skeys=sorted(date_to_cnt_sum['ZH'].keys())
+    skeys=skeys[-days:]
+    diffs=[]
+    prev=0
+    for key in skeys:
+        logging.debug('date={} prev={} cur={}'.format(key, prev, date_to_sum[key]))
+        if date_to_cnt_sum['ZH'][key] < prev:
+            logging.error('Decrease! date={} prev={} cur={}'.format(key, prev, date_to_cnt_sum['ZH'][key]))
+            diffs.append(0)
+        else:
+            diffs.append(date_to_cnt_sum['ZH'][key] - prev)
+        prev=date_to_cnt_sum['ZH'][key]
+    diffs=diffs[-(days-1):]
+    skeys=skeys[-(days-1):]
+    #print(skeys)
+    ax4.bar(skeys, diffs, color=color)
+    #ax4.bar(skeys, [date_to_cnt_sum['ZH'][dt] for dt in skeys], color=color)
+
 
     plt.show()
